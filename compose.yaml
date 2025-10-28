@@ -1,0 +1,54 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      CLUSTER_ID: 'EmptNWtoR4GGWx-BH6nGLQ'
+
+      # Inclui PLAINTEXT_HOST para consumer.py
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093,PLAINTEXT_HOST://0.0.0.0:29092,' 
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  app:
+    build: ./app
+    container_name: fastapi-producer
+    # reload é problemático quando a aplicação falha (o contêiner não fecha)
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    # Não deve haver nenhuma modificação no código durante execução, mas deixei mesmo assim.
+    volumes:
+     - ./app:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - kafka
+      
+  # Opcional
+  consumer:
+    build: ./app
+    container_name: python-consumer
+    # reload é problemático quando a aplicação falha (o contêiner não fecha)
+    command: python consumer.py
+    restart: unless-stopped
+    # Não deve haver nenhuma modificação no código durante execução, mas deixei mesmo assim.
+    volumes:
+     - ./app:/app
+    environment:
+      KAFKA_BROKER_LOCAL: kafka:9092
+      KAFKA_TOPIC: fastapi_messages
+      KAFKA_GROUP_ID: fastapi-group
+    depends_on:
+      - kafka
