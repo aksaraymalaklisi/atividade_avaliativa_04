@@ -22,3 +22,14 @@ Ele também possui dependências. Crie uma venv e instale-as:
 E, dentro de `app/`, rode o consumer:
 
 `python consumer.py`
+
+## Adicional
+
+### Estrutura da .env
+
+```bash
+KAFKA_BROKER=kafka:9092
+KAFKA_BROKER_LOCAL=localhost:29092
+KAFKA_TOPIC=fastapi_messages
+KAFKA_GROUP_ID=fastapi-group
+```
